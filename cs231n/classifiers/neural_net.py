@@ -80,8 +80,22 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
+        # My comments in this section contains bullet points with the following numbered prefixes
+        #    {F# = functionality details, M# = math details}
+        
+        # 1st layer of the neural network: 
+        #    - F1: Produces weighted input data with added bias using the linear function: H = (X . W1) + b1
+        #    - F2: Passes the outputs of F1 through the ReLU activation function: H = ReLU(H) = max{0, H} 
+        #    - M2: Activation functions transform layer output to a non-linear function, which is required to
+        #          allow learning meaningful loss gradients (that depend on inputs) when backpropagating errors.
+        #          ReLU is used because it's computationally efficient and very effective in practice.
         hidden_layer = np.maximum(0,np.dot(X, W1) + b1)
         
+        # 2nd layer of the neural network:
+        #    - F1: Weights the output of hidden_layer(h) with bias offset by computing: S = (h . W2) + b2
+        #    - F2: The 2nd layer adds more complexity to the model by applying weights and biases to the non-linear
+        #          output of hidden_layer. This improves & refines the adjusting of input weights during training,
+        #          as backpropagation provides more details on how each input feature affects the loss gradient.
         scores = np.dot(hidden_layer, W2) + b2
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -100,13 +114,29 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
+        # Compute scores as probabilities using the softmax activation function, where each value (N,C) in the
+        # prob_scores (P) matrix represents the probability that class C is the correct label/classification for
+        # input data sample N. (Softmax is a popular effective choice for non-binary classification problems)
         exp_scores = np.exp(scores)
         prob_scores = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
         
-        loss_per_class = -np.log(prob_scores[range(N),y])
-        average_loss = np.sum(loss_per_class) / N
+        # Compute the negative log likelihood of the correct class label for each input (cross-entropy loss).
+        # This^ is defined for each input i as follows: L[i] = -log(P[i,y[i]]) ---> range of i = [0,N)
+        #    - P[i,y[i]] indicates the probability of input i having the truthful class label (y[i])
+        #    - Why we use -log(P): more efficient to differentiate and minimize by SGD, compared to raw probability
+        correct_class_loss = -np.log(prob_scores[range(N),y])
+        
+        # scalar quantity describing average loss over all input data samples
+        average_loss = np.sum(correct_class_loss) / N
+        
+        # Regularization function computed using L2 norm of weight matrices:
+        #   - Solves the problem of overfitting model on training data
+        #   - Does this^ by penalizing complexity of the model
+        #   - L2 norm achieves this by encouraging weight spread out across all neurons/values in a layer
+        #   - Lower L2 norm = better weight distribution in W# matrix = less complex layer = lower relative loss from W#
         loss_regularization = reg*np.sum(W1*W1) + reg*np.sum(W2*W2)
         
+        # Compute total loss for current model output: quantifies our unhapiness with scores across training data
         loss = average_loss + loss_regularization
         
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -120,19 +150,43 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
+        # This section uses chain rule to compute gradients of loss function w.r.t. weight matrices and bias vectors,
+        # to quantify how much each layer is negatively affecting the total loss.
+        
+        # Compute dL/dS[i], where L is the total loss and S[i] represents the class scores for input i.
+        # Formula has been derived in Tutorial 2:
+        #    dL/dS[i] = dl/dL[i] . dL[i]/dP . dP/dS[i] = (P[i] - 1) / N
         scores_grad = prob_scores
         scores_grad[range(N),y] -= 1
         scores_grad /= N
         
-        grads['W2'] = np.dot(hidden_layer.T, scores_grad)
-        grads['b2'] = np.sum(scores_grad, axis=0)
+        # In backpropagation:
+        #   - Addition operator acts as a "gradient distributor" (all inputs & outputs have identical gradients)
+        #   - Multiply operator acts as a "gradient switcher" (value of other operand multiplies the output gradient)
         
+        # S = (h . W2) + b2 --> Therefore:
+        #   - By gradient distributor, dL/db2 = dL/dS = sum_over_i(dL/dS[i]) = sum_over_rows(scores_grad)
+        grads['b2'] = np.sum(scores_grad, axis=0, keepdims=True)
+        #   - By gradient switcher, dL/dW2 = (h.Transpose) . (dL/dS)
+        #   - Need to transpose h: (cols in M1 = rows in M2) must be true for (M1 . M2) to be defined
+        #   - Shape(dL/dW2) = (H,C) = (H,N).(N,C)
+        grads['W2'] = np.dot(hidden_layer.T, scores_grad)
+        
+        # By gradient switcher and matrix product definition, dL/dh = (dL/dS) . (W2.Transpose)
+        # Shape(dL/dh) = (N,H) = (N,C).(C,H)
         hidden_grad = np.dot(scores_grad, W2.T)
+        # ReLU activation ignores gradients less than zero
         hidden_grad[hidden_layer <= 0] = 0
         
+        # By gradient distributor, dL/db1 = dL/dh = sum_over_rows(hidden_grad)
+        grads['b1'] = np.sum(hidden_grad, axis=0, keepdims=True)
+        # By gradient switcher and matrix product definition, dL/dW1 = (X.Transpose) . (dL/dh)
+        # Shape(dL/dW1) = (D,H) = (D,N).(N,H)
         grads['W1'] = np.dot(X.T, hidden_grad)
-        grads['b1'] = np.sum(hidden_grad, axis=0)
-        
+       
+        # Regularization Loss (rL) contributes to the "Wg" loss gradients in the following way:
+        #   - Matrix Addition: Wn = Wn + rL = Wn + reg*(Wn^2)
+        #   - Total Gradient: dL/dWn = dL/dWn + d/dWn(reg*(Wn^2)) = (dL/dWn) + (2*reg*Wn)
         grads['W2'] += 2*reg*W2
         grads['W1'] += 2*reg*W1
 
