@@ -79,8 +79,10 @@ class TwoLayerNet(object):
         # shape (N, C).                                                             #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        
+        hidden_layer = np.maximum(0,np.dot(X, W1) + b1)
+        
+        scores = np.dot(hidden_layer, W2) + b2
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -97,9 +99,16 @@ class TwoLayerNet(object):
         # classifier loss.                                                          #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
-
+        
+        exp_scores = np.exp(scores)
+        prob_scores = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+        
+        loss_per_class = -np.log(prob_scores[range(N),y])
+        average_loss = np.sum(loss_per_class) / N
+        loss_regularization = reg*np.sum(W1*W1) + reg*np.sum(W2*W2)
+        
+        loss = average_loss + loss_regularization
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         # Backward pass: compute gradients
@@ -110,8 +119,22 @@ class TwoLayerNet(object):
         # grads['W1'] should store the gradient on W1, and be a matrix of same size #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        
+        scores_grad = prob_scores
+        scores_grad[range(N),y] -= 1
+        scores_grad /= N
+        
+        grads['W2'] = np.dot(hidden_layer.T, scores_grad)
+        grads['b2'] = np.sum(scores_grad, axis=0)
+        
+        hidden_grad = np.dot(scores_grad, W2.T)
+        hidden_grad[hidden_layer <= 0] = 0
+        
+        grads['W1'] = np.dot(X.T, hidden_grad)
+        grads['b1'] = np.sum(hidden_grad, axis=0)
+        
+        grads['W2'] += 2*reg*W2
+        grads['W1'] += 2*reg*W1
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
