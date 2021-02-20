@@ -80,22 +80,19 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
-        # My comments in this section contains bullet points with the following numbered prefixes
-        #    {F# = functionality details, M# = math details}
-        
         # 1st layer of the neural network: 
-        #    - F1: Produces weighted input data with added bias using the linear function: H = (X . W1) + b1
-        #    - F2: Passes the outputs of F1 through the ReLU activation function: H = ReLU(H) = max{0, H} 
-        #    - M2: Activation functions transform layer output to a non-linear function, which is required to
-        #          allow learning meaningful loss gradients (that depend on inputs) when backpropagating errors.
-        #          ReLU is used because it's computationally efficient and very effective in practice.
+        #    - Produces weighted input data with added bias using the linear function: H = (X . W1) + b1
+        #    - Passes the outputs of F1 through the ReLU activation function: H = ReLU(H) = max{0, H} 
+        #    - Activation functions transform layer output to a non-linear function, which is required to
+        #      allow learning meaningful loss gradients (that depend on inputs) when backpropagating errors.
+        #      ReLU is used because it's computationally efficient and very effective in practice.
         hidden_layer = np.maximum(0,np.dot(X, W1) + b1)
         
         # 2nd layer of the neural network:
-        #    - F1: Weights the output of hidden_layer(h) with bias offset by computing: S = (h . W2) + b2
-        #    - F2: The 2nd layer adds more complexity to the model by applying weights and biases to the non-linear
-        #          output of hidden_layer. This improves & refines the adjusting of input weights during training,
-        #          as backpropagation provides more details on how each input feature affects the loss gradient.
+        #    - Weights the output of hidden_layer(h) with bias offset by computing: S = (h . W2) + b2
+        #    - The 2nd layer adds more complexity to the model by applying weights and biases to the non-linear
+        #      output of hidden_layer. This improves & refines the adjusting of input weights during training,
+        #      as backpropagation provides more details on how each input feature affects the loss gradient.
         scores = np.dot(hidden_layer, W2) + b2
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -116,7 +113,7 @@ class TwoLayerNet(object):
         
         # Compute scores as probabilities using the softmax activation function, where each value (N,C) in the
         # prob_scores (P) matrix represents the probability that class C is the correct label/classification for
-        # input data sample N. (Softmax is a popular effective choice for non-binary classification problems)
+        # input data sample N. (Softmax is a popular effective output for non-binary classification problems)
         exp_scores = np.exp(scores)
         prob_scores = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
         
@@ -184,9 +181,9 @@ class TwoLayerNet(object):
         # Shape(dL/dW1) = (D,H) = (D,N).(N,H)
         grads['W1'] = np.dot(X.T, hidden_grad)
        
-        # Regularization Loss (rL) contributes to the "Wg" loss gradients in the following way:
+        # Regularization Loss (rL) contributes to the Wn loss gradients in the following way:
         #   - Matrix Addition: Wn = Wn + rL = Wn + reg*(Wn^2)
-        #   - Total Gradient: dL/dWn = dL/dWn + d/dWn(reg*(Wn^2)) = (dL/dWn) + (2*reg*Wn)
+        #   - Total Wn Gradient: dL/dWn = dL/dWn + d/dWn(reg*(Wn^2)) = (dL/dWn) + (2*reg*Wn)
         grads['W2'] += 2*reg*W2
         grads['W1'] += 2*reg*W1
 
